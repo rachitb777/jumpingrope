@@ -1,0 +1,82 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #1a1a2e;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  user-select: none;
+}
+
+#game-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+#env-bar {
+  display: flex;
+  gap: 8px;
+  background: rgba(0,0,0,0.4);
+  padding: 8px 14px;
+  border-radius: 30px;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+#env-bar span {
+  color: rgba(255,255,255,0.6);
+  font-size: 13px;
+  line-height: 32px;
+  margin-right: 4px;
+  letter-spacing: 0.5px;
+}
+
+.env-btn {
+  padding: 6px 18px;
+  border: 2px solid rgba(255,255,255,0.25);
+  border-radius: 20px;
+  background: transparent;
+  color: rgba(255,255,255,0.7);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+
+.env-btn:hover {
+  border-color: rgba(255,255,255,0.6);
+  color: #fff;
+  background: rgba(255,255,255,0.1);
+}
+
+.env-btn.active {
+  border-color: #FFD700;
+  color: #FFD700;
+  background: rgba(255,215,0,0.12);
+}
+
+#canvas-container {
+  position: relative;
+}
+
+#gameCanvas {
+  display: block;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.08);
+  cursor: pointer;
+}
+
+#hint {
+  color: rgba(255,255,255,0.45);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
