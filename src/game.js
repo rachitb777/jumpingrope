@@ -581,6 +581,21 @@ function drawParticles(envKey) {
   ctx.globalAlpha = 1;
 }
 
+// ─── Levels ───────────────────────────────────────────────────────────────────
+const JUMPS_PER_LEVEL  = 5;
+const SPEED_PER_LEVEL  = 0.012;
+const MAX_ROPE_SPEED   = 0.13;
+
+let levelUpTimer = 0;   // frames remaining for level-up flash
+
+function levelForScore(score) {
+  return Math.floor(score / JUMPS_PER_LEVEL) + 1;
+}
+
+function ropeSpeedForLevel(envKey, level) {
+  return Math.min(ENVS[envKey].ropeSpeed + (level - 1) * SPEED_PER_LEVEL, MAX_ROPE_SPEED);
+}
+
 // ─── Screen shake ─────────────────────────────────────────────────────────────
 let shakeFrames = 0, shakeMag = 0;
 function triggerShake(mag, frames) { shakeMag = mag; shakeFrames = frames; }
@@ -620,17 +635,21 @@ const game = {
   mode: 'start',   // 'start' | 'playing' | 'gameover'
   score: 0,
   highScore: 0,
+  level: 1,
+  highLevel: 1,
   env: 'park',
 
   reset() {
     this.mode     = 'playing';
     this.score    = 0;
+    this.level    = 1;
     player.y      = GROUND;
     player.vy     = 0;
     player.jumping = false;
     rope.angle    = -Math.PI / 2;
     rope.speed    = ENVS[this.env].ropeSpeed;
     pendingScore  = false;
+    levelUpTimer  = 0;
     particles.length = 0;
   },
 
@@ -652,7 +671,8 @@ const game = {
 // ─── HUD drawing ──────────────────────────────────────────────────────────────
 function drawHUD() {
   ctx.save();
-  // Score pill
+
+  // Score pill (top-left)
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   roundRect(ctx, 12, 12, 140, 52, 10);
   ctx.fill();
@@ -664,6 +684,50 @@ function drawHUD() {
   ctx.font = '14px "Segoe UI", Arial';
   ctx.fillStyle = 'rgba(255,255,255,0.65)';
   ctx.fillText(`Best: ${game.highScore}`, 22, 58);
+
+  // Level badge (top-right)
+  const levelColors = ['#81C784','#AED581','#FFD54F','#FFB74D','#FF8A65','#EF5350','#E040FB'];
+  const col = levelColors[Math.min(game.level - 1, levelColors.length - 1)];
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  roundRect(ctx, W - 118, 12, 106, 52, 10);
+  ctx.fill();
+  ctx.fillStyle = col;
+  ctx.font = 'bold 22px "Segoe UI", Arial';
+  ctx.textAlign = 'right';
+  ctx.fillText(`LVL ${game.level}`, W - 16, 40);
+  ctx.font = '13px "Segoe UI", Arial';
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  const progress = game.score % JUMPS_PER_LEVEL;
+  ctx.fillText(`${progress}/${JUMPS_PER_LEVEL} jumps`, W - 16, 58);
+
+  ctx.restore();
+}
+
+// ─── Level-up flash ───────────────────────────────────────────────────────────
+function drawLevelUp() {
+  if (levelUpTimer <= 0) return;
+  const alpha = Math.min(levelUpTimer / 20, 1);   // fade in quickly, hold, fade out
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.textAlign = 'center';
+
+  // Glow ring
+  ctx.strokeStyle = '#FFD700';
+  ctx.lineWidth = 3;
+  ctx.globalAlpha = alpha * 0.35;
+  ctx.beginPath();
+  ctx.arc(CX, H / 2 - 10, 70, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.globalAlpha = alpha;
+
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 52px "Segoe UI", Arial';
+  ctx.fillText(`LEVEL ${game.level}!`, CX, H / 2);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.font = '20px "Segoe UI", Arial';
+  ctx.fillText('Speed up!', CX, H / 2 + 36);
+
   ctx.restore();
 }
 
@@ -710,44 +774,36 @@ function drawStartScreen() {
 
 function drawGameOver() {
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  roundRect(ctx, CX - 210, H / 2 - 110, 420, 210, 18);
+  roundRect(ctx, CX - 210, H / 2 - 120, 420, 230, 18);
   ctx.fill();
 
   ctx.textAlign = 'center';
 
   ctx.fillStyle = '#FF5252';
   ctx.font = 'bold 44px "Segoe UI", Arial';
-  ctx.fillText('Caught!', CX, H / 2 - 45);
+  ctx.fillText('Caught!', CX, H / 2 - 55);
 
   ctx.fillStyle = '#FFF';
   ctx.font = 'bold 26px "Segoe UI", Arial';
-  ctx.fillText(`Score: ${game.score}`, CX, H / 2 + 10);
+  ctx.fillText(`Score: ${game.score}`, CX, H / 2);
+
+  const levelColors = ['#81C784','#AED581','#FFD54F','#FFB74D','#FF8A65','#EF5350','#E040FB'];
+  const col = levelColors[Math.min(game.level - 1, levelColors.length - 1)];
+  ctx.fillStyle = col;
+  ctx.font = 'bold 18px "Segoe UI", Arial';
+  ctx.fillText(`Reached Level ${game.level}`, CX, H / 2 + 32);
 
   if (game.score === game.highScore && game.score > 0) {
     ctx.fillStyle = '#FFD700';
-    ctx.font = '16px "Segoe UI", Arial';
-    ctx.fillText('🏆 New high score!', CX, H / 2 + 40);
+    ctx.font = '15px "Segoe UI", Arial';
+    ctx.fillText('🏆 New high score!', CX, H / 2 + 58);
   }
 
   ctx.fillStyle = 'rgba(255,255,255,0.65)';
   ctx.font = '17px "Segoe UI", Arial';
-  ctx.fillText('Press SPACE or tap to try again', CX, H / 2 + 78);
+  ctx.fillText('Press SPACE or tap to try again', CX, H / 2 + 88);
 }
 
-// Speed indicator (subtle visual)
-function drawSpeedIndicator() {
-  if (game.score < 3) return;
-  const lvl = Math.min(Math.floor(game.score / 5), 5);
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  roundRect(ctx, W - 118, 12, 106, 34, 8);
-  ctx.fill();
-  const colors = ['#81C784','#AED581','#FFD54F','#FFB74D','#FF8A65','#EF5350'];
-  ctx.fillStyle = colors[lvl] || '#EF5350';
-  ctx.font = 'bold 13px "Segoe UI", Arial';
-  ctx.textAlign = 'right';
-  const labels = ['','','Fast','Faster','Blazing!','INSANE!'];
-  ctx.fillText(labels[lvl] || 'INSANE!', W - 16, 34);
-}
 
 // ─── Main loop ────────────────────────────────────────────────────────────────
 function loop() {
@@ -789,14 +845,21 @@ function loop() {
       const result = checkScoreAndCollision(ENVS[game.env]);
       if (result === 'score') {
         game.score++;
-        // Gradually increase speed (capped)
-        rope.speed = Math.min(ENVS[game.env].ropeSpeed + game.score * 0.0018, 0.13);
+        const newLevel = levelForScore(game.score);
+        if (newLevel > game.level) {
+          game.level   = newLevel;
+          levelUpTimer = 90;
+          triggerShake(3, 10);
+        }
+        rope.speed = ropeSpeedForLevel(game.env, game.level);
       } else if (result === 'hit') {
         game.mode = 'gameover';
         if (game.score > game.highScore) game.highScore = game.score;
+        if (game.level > game.highLevel) game.highLevel = game.level;
         spawnHitFlash(player.x, player.y - 40);
         triggerShake(6, 18);
       }
+      if (levelUpTimer > 0) levelUpTimer--;
     }
 
     // ── Draw ──
@@ -813,7 +876,7 @@ function loop() {
     if (rope.depth >= 0) rope.draw(game.env);
 
     drawHUD();
-    drawSpeedIndicator();
+    drawLevelUp();
 
     if (game.mode === 'gameover') drawGameOver();
   }
@@ -842,7 +905,7 @@ document.querySelectorAll('.env-btn').forEach(btn => {
     game.env = btn.dataset.env;
     // Update rope speed for new env if playing
     if (game.mode === 'playing') {
-      rope.speed = ENVS[game.env].ropeSpeed + game.score * 0.0018;
+      rope.speed = ropeSpeedForLevel(game.env, game.level);
     }
   });
 });
